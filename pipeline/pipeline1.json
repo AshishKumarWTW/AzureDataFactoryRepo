@@ -18,7 +18,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "SELECT top 10 *\nFROM FundingCache_ClientParticipant.ClientEligibility\nWHERE allocationAmount = 1503-- IS NOT NULL;",
+						"sqlReaderQuery": "SELECT top 10 *\nFROM FundingCache_ClientParticipant.ClientEligibility\nWHERE allocationAmount <= 1503-- IS NOT NULL;",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
