@@ -1,0 +1,136 @@
+{
+	"name": "AzureSqlTable2",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "personId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "clientMemberId",
+				"type": "varchar"
+			},
+			{
+				"name": "campaignId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "campaignSegmentId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "programEligibilityStartDate",
+				"type": "date"
+			},
+			{
+				"name": "generalLossOfEligibilityEndDate",
+				"type": "date"
+			},
+			{
+				"name": "dateOfDeath",
+				"type": "date"
+			},
+			{
+				"name": "dateOfDivorce",
+				"type": "date"
+			},
+			{
+				"name": "eligibleFromPersonId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "eligibleFromPersonRelationshipTypeId",
+				"type": "tinyint",
+				"precision": 3
+			},
+			{
+				"name": "divisionCode",
+				"type": "varchar"
+			},
+			{
+				"name": "reportingLevel1",
+				"type": "varchar"
+			},
+			{
+				"name": "reportingLevel2",
+				"type": "varchar"
+			},
+			{
+				"name": "reportingLevel3",
+				"type": "varchar"
+			},
+			{
+				"name": "reportingLevel4",
+				"type": "varchar"
+			},
+			{
+				"name": "reportingLevel5",
+				"type": "varchar"
+			},
+			{
+				"name": "overallHraEndDate",
+				"type": "date"
+			},
+			{
+				"name": "hraQualificationOverride",
+				"type": "bit"
+			},
+			{
+				"name": "excludeFromHraEligibilityFile",
+				"type": "bit"
+			},
+			{
+				"name": "treatAsPrimaryOnHraEligibilityFile",
+				"type": "bit"
+			},
+			{
+				"name": "biologicalSexCode",
+				"type": "char"
+			},
+			{
+				"name": "allocationStartDate",
+				"type": "date"
+			},
+			{
+				"name": "allocationAmount",
+				"type": "money",
+				"precision": 19,
+				"scale": 4
+			},
+			{
+				"name": "allocationFrequencyId",
+				"type": "tinyint",
+				"precision": 3
+			},
+			{
+				"name": "eventCode",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "eligibilityEndDate",
+				"type": "date"
+			},
+			{
+				"name": "originalDependentRelationshipTypeId",
+				"type": "tinyint",
+				"precision": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "FundingCache_ClientParticipant",
+			"table": "ClientEligibilityADFSinkTable"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
