@@ -4,7 +4,8 @@
 		"description": "demo pipeline 1",
 		"activities": [
 			{
-				"name": "copydata1",
+				"name": "Copy_DeltaRows",
+				"description": "Copy Delta Rows",
 				"type": "Copy",
 				"dependsOn": [
 					{
@@ -31,13 +32,19 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "SELECT top 10 *\nFROM FundingCache_ClientParticipant.ClientEligibility\nWHERE allocationAmount <= 1503-- IS NOT NULL;",
+						"sqlReaderQuery": "SELECT\n    CT.PersonId,\n    CT.SYS_CHANGE_OPERATION,\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
 					"sink": {
 						"type": "AzureSqlSink",
-						"writeBehavior": "insert",
+						"writeBehavior": "upsert",
+						"upsertSettings": {
+							"useTempDB": true,
+							"keys": [
+								"personId"
+							]
+						},
 						"sqlWriterUseTableLock": false,
 						"disableMetricsCollection": false
 					},
@@ -158,6 +165,43 @@
 				"typeProperties": {
 					"variableName": "CurrentVersion",
 					"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
+				}
+			},
+			{
+				"name": "Update Watermark",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy_DeltaRows",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[sp_UpdateChangeTrackingWatermark]",
+					"storedProcedureParameters": {
+						"NewVersion": {
+							"value": "@variables('CurrentVersion')",
+							"type": "Int64"
+						},
+						"TableName": {
+							"value": "SampleChangeTrackingTable",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase2",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],
