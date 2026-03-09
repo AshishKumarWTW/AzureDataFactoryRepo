@@ -76,6 +76,27 @@
 						"type": "DatasetReference"
 					}
 				}
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup_LastVersion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "LastVersion",
+					"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion"
+				}
 			}
 		],
 		"variables": {
