@@ -80,7 +80,10 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "SELECT\n    CT.PersonId,\n    CT.SYS_CHANGE_OPERATION,\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
+								"sqlReaderQuery": {
+									"value": "SELECT\nCT.PersonId,\n\nCASE CT.SYS_CHANGE_OPERATION\nWHEN 'I' THEN 'INSERT'\nWHEN 'U' THEN 'UPDATE'\nWHEN 'D' THEN 'DELETE'\nEND AS ChangeOperation,\n\nS.EmployerName,\nS.PersonAddress,\nS.Age,\nS.rowCreatedAtTimeUtc,\nS.rowExpiredAtTimeUtc\n\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\n\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
+									"type": "Expression"
+								},
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
