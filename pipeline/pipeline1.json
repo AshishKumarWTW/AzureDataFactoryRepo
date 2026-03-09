@@ -144,7 +144,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "CurrentVersion",
-					"value": "CurrentVersion =\n@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
+					"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
 				}
 			}
 		],
