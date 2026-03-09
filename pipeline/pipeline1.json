@@ -52,6 +52,14 @@
 				]
 			}
 		],
+		"variables": {
+			"LastVersion": {
+				"type": "Integer"
+			},
+			"CurrentVersion": {
+				"type": "Integer"
+			}
+		},
 		"annotations": [],
 		"lastPublishTime": "2026-02-25T16:18:51Z"
 	},
