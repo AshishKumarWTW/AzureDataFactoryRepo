@@ -72,13 +72,14 @@
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "AzureSqlTable1",
+						"referenceName": "AzureSqlTable2",
 						"type": "DatasetReference"
 					}
 				}
 			},
 			{
-				"name": "Set variable1",
+				"name": "Set LastVersion variable",
+				"description": "Set LastVersion variable",
 				"type": "SetVariable",
 				"dependsOn": [
 					{
@@ -96,6 +97,32 @@
 				"typeProperties": {
 					"variableName": "LastVersion",
 					"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion"
+				}
+			},
+			{
+				"name": "Lookup_CurrentVersion",
+				"description": "Lookup_CurrentVersion",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT CHANGE_TRACKING_CURRENT_VERSION() AS CurrentVersion",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable1",
+						"type": "DatasetReference"
+					}
 				}
 			}
 		],
