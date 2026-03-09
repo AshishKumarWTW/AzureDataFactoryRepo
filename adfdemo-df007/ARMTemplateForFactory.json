@@ -52,9 +52,23 @@
 				"description": "demo pipeline 1",
 				"activities": [
 					{
-						"name": "copydata1",
+						"name": "Copy_DeltaRows",
+						"description": "Copy Delta Rows",
 						"type": "Copy",
-						"dependsOn": [],
+						"dependsOn": [
+							{
+								"activity": "Set LastVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Set CurrentVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
 						"policy": {
 							"timeout": "0.12:00:00",
 							"retry": 0,
@@ -66,7 +80,7 @@
 						"typeProperties": {
 							"source": {
 								"type": "AzureSqlSource",
-								"sqlReaderQuery": "SELECT top 10 *\nFROM FundingCache_ClientParticipant.ClientEligibility\nWHERE allocationAmount <= 1503-- IS NOT NULL;",
+								"sqlReaderQuery": "SELECT\n    CT.PersonId,\n    CT.SYS_CHANGE_OPERATION,\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
 								"queryTimeout": "02:00:00",
 								"partitionOption": "None"
 							},
@@ -100,17 +114,189 @@
 								"parameters": {}
 							}
 						]
+					},
+					{
+						"name": "Lookup_LastVersion",
+						"description": "Lookup_LastVersion",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT LastSyncVersion\nFROM ChangeTrackingWatermark\nWHERE TableName = 'SampleChangeTrackingTable'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable2",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Set LastVersion",
+						"description": "Set LastVersion variable",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Lookup_LastVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "LastVersion",
+							"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion"
+						}
+					},
+					{
+						"name": "Lookup_CurrentVersion",
+						"description": "Lookup_CurrentVersion",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT CHANGE_TRACKING_CURRENT_VERSION() AS CurrentVersion",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "Set CurrentVersion",
+						"description": "Set CurrentVersion",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Lookup_CurrentVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "CurrentVersion",
+							"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
+						}
+					},
+					{
+						"name": "Update Watermark",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Merge Logic",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_UpdateChangeTrackingWatermark]",
+							"storedProcedureParameters": {
+								"NewVersion": {
+									"value": "@variables('CurrentVersion')",
+									"type": "Int64"
+								},
+								"TableName": {
+									"value": "SampleChangeTrackingTable",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase2",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Merge Logic",
+						"description": "StoredProcedure_Merge\n",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Copy_DeltaRows",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_MergeSampleChangeTracking]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase2",
+							"type": "LinkedServiceReference"
+						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"LastVersion": {
+						"type": "Integer"
+					},
+					"CurrentVersion": {
+						"type": "Integer"
+					}
 				},
 				"annotations": [],
 				"lastPublishTime": "2026-02-25T16:18:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/AzureSqlTable1')]",
-				"[concat(variables('factoryId'), '/datasets/AzureSqlTable2')]"
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable2')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase2')]"
 			]
 		},
 		{
@@ -385,8 +571,8 @@
 					}
 				],
 				"typeProperties": {
-					"schema": "FundingCache_ClientParticipant",
-					"table": "ClientEligibilityADFSinkTable"
+					"schema": "dbo",
+					"table": "SampleChangeTrackingTable_Staging"
 				}
 			},
 			"dependsOn": [
