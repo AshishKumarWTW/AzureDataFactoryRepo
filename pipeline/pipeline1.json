@@ -78,7 +78,7 @@
 				}
 			},
 			{
-				"name": "Set LastVersion variable",
+				"name": "Set LastVersion",
 				"description": "Set LastVersion variable",
 				"type": "SetVariable",
 				"dependsOn": [
@@ -123,6 +123,28 @@
 						"referenceName": "AzureSqlTable1",
 						"type": "DatasetReference"
 					}
+				}
+			},
+			{
+				"name": "Set CurrentVersion",
+				"description": "Set CurrentVersion",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup_CurrentVersion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "CurrentVersion",
+					"value": "CurrentVersion =\n@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
 				}
 			}
 		],
