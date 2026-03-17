@@ -39,65 +39,8 @@
 					"sink": {
 						"type": "AzureSqlSink",
 						"preCopyScript": "TRUNCATE dbo.SampleChangeTrackingTable_Staging;",
-						"sqlWriterStoredProcedureName": "[dbo].[sp_InsertStaging]",
-						"storedProcedureParameters": {
-							"Age": {
-								"type": "Int32",
-								"value": {
-									"value": "PersonId",
-									"type": "Expression"
-								}
-							},
-							"ChangeOperation": {
-								"type": "String",
-								"value": {
-									"value": "ChangeOperation",
-									"type": "Expression"
-								}
-							},
-							"EmployerName": {
-								"type": "String",
-								"value": {
-									"value": "EmployerName",
-									"type": "Expression"
-								}
-							},
-							"PersonAddress": {
-								"type": "String",
-								"value": {
-									"value": "PersonAddress",
-									"type": "Expression"
-								}
-							},
-							"PersonId": {
-								"type": "Int32",
-								"value": {
-									"value": "PersonId",
-									"type": "Expression"
-								}
-							},
-							"rowCreatedAtTimeUtc": {
-								"type": "DateTime",
-								"value": {
-									"value": "rowCreatedAtTimeUtc",
-									"type": "Expression"
-								}
-							},
-							"rowExpiredAtTimeUtc": {
-								"type": "DateTime",
-								"value": {
-									"value": "rowExpiredAtTimeUtc",
-									"type": "Expression"
-								}
-							},
-							"SYS_CHANGE_VERSION": {
-								"type": "Int64",
-								"value": {
-									"value": "SYS_CHANGE_VERSION",
-									"type": "Expression"
-								}
-							}
-						},
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false,
 						"disableMetricsCollection": false
 					},
 					"enableStaging": false,
