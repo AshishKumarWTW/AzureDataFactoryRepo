@@ -33,7 +33,7 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "SELECT\nCT.PersonId,\n\nCASE CT.SYS_CHANGE_OPERATION\nWHEN 'I' THEN 'INSERT'\nWHEN 'U' THEN 'UPDATE'\nWHEN 'D' THEN 'DELETE'\nEND AS ChangeOperation,\n\nS.EmployerName,\nS.PersonAddress,\nS.Age,\nS.rowCreatedAtTimeUtc,\nS.rowExpiredAtTimeUtc\n\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\n\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
+							"value": "SELECT\n    CT.PersonId,\n\n    CASE CT.SYS_CHANGE_OPERATION\n        WHEN 'I' THEN 'INSERT'\n        WHEN 'U' THEN 'UPDATE'\n        WHEN 'D' THEN 'DELETE'\n    END AS ChangeOperation,\n\n    CT.SYS_CHANGE_VERSION,   -- 🔥 IMPORTANT\n\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\n\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\n\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
 							"type": "Expression"
 						},
 						"queryTimeout": "02:00:00",
@@ -41,6 +41,7 @@
 					},
 					"sink": {
 						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE SampleChangeTrackingTable_Staging;",
 						"writeBehavior": "insert",
 						"sqlWriterUseTableLock": false,
 						"disableMetricsCollection": false
@@ -113,7 +114,10 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "LastVersion",
-					"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion"
+					"value": {
+						"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion",
+						"type": "Expression"
+					}
 				}
 			},
 			{
@@ -161,7 +165,10 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "CurrentVersion",
-					"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion"
+					"value": {
+						"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion",
+						"type": "Expression"
+					}
 				}
 			},
 			{
@@ -187,7 +194,10 @@
 					"storedProcedureName": "[dbo].[sp_UpdateChangeTrackingWatermark]",
 					"storedProcedureParameters": {
 						"NewVersion": {
-							"value": "@variables('CurrentVersion')",
+							"value": {
+								"value": "@variables('CurrentVersion')",
+								"type": "Expression"
+							},
 							"type": "Int64"
 						},
 						"TableName": {
