@@ -1,0 +1,620 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name"
+		},
+		"AzureSqlDatabase2": {
+			"type": "string"
+		},
+		"AzureSqlDatabase1": {
+			"type": "string"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pipeline1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "demo pipeline 1",
+				"activities": [
+					{
+						"name": "Copy_DeltaRows",
+						"description": "Copy Delta Rows",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set LastVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Set CurrentVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderStoredProcedureName": "[[dbo].[sp_GetChanges]",
+								"storedProcedureParameters": {
+									"LastVersion": {
+										"type": "Int16",
+										"value": {
+											"value": "@variables('LastVersion')",
+											"type": "Expression"
+										}
+									}
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE dbo.SampleChangeTrackingTable_Staging;",
+								"sqlWriterStoredProcedureName": "[[dbo].[sp_InsertStaging]",
+								"storedProcedureParameters": {
+									"Age": {
+										"type": "Int32",
+										"value": {
+											"value": "PersonId",
+											"type": "Expression"
+										}
+									},
+									"ChangeOperation": {
+										"type": "String",
+										"value": {
+											"value": "ChangeOperation",
+											"type": "Expression"
+										}
+									},
+									"EmployerName": {
+										"type": "String",
+										"value": {
+											"value": "EmployerName",
+											"type": "Expression"
+										}
+									},
+									"PersonAddress": {
+										"type": "String",
+										"value": {
+											"value": "PersonAddress",
+											"type": "Expression"
+										}
+									},
+									"PersonId": {
+										"type": "Int32",
+										"value": {
+											"value": "PersonId",
+											"type": "Expression"
+										}
+									},
+									"rowCreatedAtTimeUtc": {
+										"type": "DateTime",
+										"value": {
+											"value": "rowCreatedAtTimeUtc",
+											"type": "Expression"
+										}
+									},
+									"rowExpiredAtTimeUtc": {
+										"type": "DateTime",
+										"value": {
+											"value": "rowExpiredAtTimeUtc",
+											"type": "Expression"
+										}
+									},
+									"SYS_CHANGE_VERSION": {
+										"type": "Int64",
+										"value": {
+											"value": "SYS_CHANGE_VERSION",
+											"type": "Expression"
+										}
+									}
+								},
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference"
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "AzureSqlTable2",
+								"type": "DatasetReference"
+							}
+						]
+					},
+					{
+						"name": "Lookup_LastVersion",
+						"description": "Lookup_LastVersion",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT LastSyncVersion\nFROM ChangeTrackingWatermark\nWHERE TableName = 'SampleChangeTrackingTable'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable2",
+								"type": "DatasetReference"
+							}
+						}
+					},
+					{
+						"name": "Set LastVersion",
+						"description": "Set LastVersion variable",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Lookup_LastVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "LastVersion",
+							"value": {
+								"value": "@activity('Lookup_LastVersion').output.firstRow.LastSyncVersion",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Lookup_CurrentVersion",
+						"description": "Lookup_CurrentVersion",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT CHANGE_TRACKING_CURRENT_VERSION() AS CurrentVersion",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable1",
+								"type": "DatasetReference"
+							}
+						}
+					},
+					{
+						"name": "Set CurrentVersion",
+						"description": "Set CurrentVersion",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Lookup_CurrentVersion",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "CurrentVersion",
+							"value": {
+								"value": "@activity('Lookup_CurrentVersion').output.firstRow.CurrentVersion",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Update Watermark",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Merge Logic",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_UpdateChangeTrackingWatermark]",
+							"storedProcedureParameters": {
+								"NewVersion": {
+									"value": {
+										"value": "@variables('CurrentVersion')",
+										"type": "Expression"
+									},
+									"type": "Int64"
+								},
+								"TableName": {
+									"value": "SampleChangeTrackingTable",
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "[parameters('AzureSqlDatabase2')]",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Merge Logic",
+						"description": "StoredProcedure_Merge\n",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Copy_DeltaRows",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[sp_MergeSampleChangeTracking]"
+						},
+						"linkedServiceName": {
+							"referenceName": "[parameters('AzureSqlDatabase2')]",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"variables": {
+					"LastVersion": {
+						"type": "Integer"
+					},
+					"CurrentVersion": {
+						"type": "Integer"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-02-25T16:18:51Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable1')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable1')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "[parameters('AzureSqlDatabase1')]",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "personId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "clientMemberId",
+						"type": "varchar"
+					},
+					{
+						"name": "campaignId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "campaignSegmentId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "programEligibilityStartDate",
+						"type": "date"
+					},
+					{
+						"name": "generalLossOfEligibilityEndDate",
+						"type": "date"
+					},
+					{
+						"name": "dateOfDeath",
+						"type": "date"
+					},
+					{
+						"name": "dateOfDivorce",
+						"type": "date"
+					},
+					{
+						"name": "eligibleFromPersonId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "eligibleFromPersonRelationshipTypeId",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "divisionCode",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel1",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel2",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel3",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel4",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel5",
+						"type": "varchar"
+					},
+					{
+						"name": "overallHraEndDate",
+						"type": "date"
+					},
+					{
+						"name": "hraQualificationOverride",
+						"type": "bit"
+					},
+					{
+						"name": "excludeFromHraEligibilityFile",
+						"type": "bit"
+					},
+					{
+						"name": "treatAsPrimaryOnHraEligibilityFile",
+						"type": "bit"
+					},
+					{
+						"name": "biologicalSexCode",
+						"type": "char"
+					},
+					{
+						"name": "allocationStartDate",
+						"type": "date"
+					},
+					{
+						"name": "allocationAmount",
+						"type": "money",
+						"precision": 19,
+						"scale": 4
+					},
+					{
+						"name": "allocationFrequencyId",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "eventCode",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "eligibilityEndDate",
+						"type": "date"
+					},
+					{
+						"name": "originalDependentRelationshipTypeId",
+						"type": "tinyint",
+						"precision": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "FundingCache_ClientParticipant",
+					"table": "ClientEligibility"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable2')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "[parameters('AzureSqlDatabase2')]",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "personId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "clientMemberId",
+						"type": "varchar"
+					},
+					{
+						"name": "campaignId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "campaignSegmentId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "programEligibilityStartDate",
+						"type": "date"
+					},
+					{
+						"name": "generalLossOfEligibilityEndDate",
+						"type": "date"
+					},
+					{
+						"name": "dateOfDeath",
+						"type": "date"
+					},
+					{
+						"name": "dateOfDivorce",
+						"type": "date"
+					},
+					{
+						"name": "eligibleFromPersonId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "eligibleFromPersonRelationshipTypeId",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "divisionCode",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel1",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel2",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel3",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel4",
+						"type": "varchar"
+					},
+					{
+						"name": "reportingLevel5",
+						"type": "varchar"
+					},
+					{
+						"name": "overallHraEndDate",
+						"type": "date"
+					},
+					{
+						"name": "hraQualificationOverride",
+						"type": "bit"
+					},
+					{
+						"name": "excludeFromHraEligibilityFile",
+						"type": "bit"
+					},
+					{
+						"name": "treatAsPrimaryOnHraEligibilityFile",
+						"type": "bit"
+					},
+					{
+						"name": "biologicalSexCode",
+						"type": "char"
+					},
+					{
+						"name": "allocationStartDate",
+						"type": "date"
+					},
+					{
+						"name": "allocationAmount",
+						"type": "money",
+						"precision": 19,
+						"scale": 4
+					},
+					{
+						"name": "allocationFrequencyId",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "eventCode",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "eligibilityEndDate",
+						"type": "date"
+					},
+					{
+						"name": "originalDependentRelationshipTypeId",
+						"type": "tinyint",
+						"precision": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "SampleChangeTrackingTable_Staging"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
