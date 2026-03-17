@@ -32,16 +32,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderStoredProcedureName": "[dbo].[sp_GetChanges]",
-						"storedProcedureParameters": {
-							"LastVersion": {
-								"type": "Int16",
-								"value": {
-									"value": "@variables('LastVersion')",
-									"type": "Expression"
-								}
-							}
-						},
+						"sqlReaderQuery": "SELECT\n    PersonId,\n    ChangeOperation,\n    EmployerName,\n    PersonAddress,\n    Age,\n    rowCreatedAtTimeUtc,\n    rowExpiredAtTimeUtc\nFROM\n(\n    SELECT\n        CT.PersonId,\n\n        CASE CT.SYS_CHANGE_OPERATION\n            WHEN 'I' THEN 'INSERT'\n            WHEN 'U' THEN 'UPDATE'\n            WHEN 'D' THEN 'DELETE'\n        END AS ChangeOperation,\n\n        S.EmployerName,\n        S.PersonAddress,\n        S.Age,\n        S.rowCreatedAtTimeUtc,\n        S.rowExpiredAtTimeUtc,\n\n        ROW_NUMBER() OVER (\n            PARTITION BY CT.PersonId\n            ORDER BY CT.SYS_CHANGE_VERSION DESC\n        ) AS rn\n\n    FROM CHANGETABLE(\n        CHANGES SampleChangeTrackingTable,\n        (\n            SELECT LastVersion \n            FROM ChangeTrackingWatermark \n            WHERE TableName = 'SampleChangeTrackingTable'\n        )\n    ) CT\n\n    LEFT JOIN SampleChangeTrackingTable S\n        ON CT.PersonId = S.PersonId\n) A\nWHERE rn = 1;",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
