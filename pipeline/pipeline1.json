@@ -41,7 +41,7 @@
 					},
 					"sink": {
 						"type": "AzureSqlSink",
-						"preCopyScript": "TRUNCATE TABLE SampleChangeTrackingTable_Staging;",
+						"preCopyScript": "DELETE FROM SampleChangeTrackingTable_Staging",
 						"writeBehavior": "insert",
 						"sqlWriterUseTableLock": false,
 						"disableMetricsCollection": false
