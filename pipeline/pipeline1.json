@@ -33,7 +33,7 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "SELECT\n    CT.PersonId,\n\n    CASE CT.SYS_CHANGE_OPERATION\n        WHEN 'I' THEN 'INSERT'\n        WHEN 'U' THEN 'UPDATE'\n        WHEN 'D' THEN 'DELETE'\n    END AS ChangeOperation,\n\n    CT.SYS_CHANGE_VERSION,   -- 🔥 IMPORTANT\n\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\n\nFROM CHANGETABLE\n(\nCHANGES SampleChangeTrackingTable,\n@{variables('LastVersion')}\n) CT\n\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
+							"value": "SELECT\n    CT.PersonId,\n\n    CASE CT.SYS_CHANGE_OPERATION\n        WHEN 'I' THEN 'INSERT'\n        WHEN 'U' THEN 'UPDATE'\n        WHEN 'D' THEN 'DELETE'\n    END AS ChangeOperation,\n\n    CT.SYS_CHANGE_VERSION,\n\n    S.EmployerName,\n    S.PersonAddress,\n    S.Age,\n    S.rowCreatedAtTimeUtc,\n    S.rowExpiredAtTimeUtc\n\nFROM CHANGETABLE\n(\n    CHANGES SampleChangeTrackingTable,\n    0\n) CT\n\nLEFT JOIN SampleChangeTrackingTable S\nON CT.PersonId = S.PersonId",
 							"type": "Expression"
 						},
 						"queryTimeout": "02:00:00",
